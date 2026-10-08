@@ -3626,6 +3626,102 @@ rejected general constructor. A different worker capture must first establish
 substantial unused materialization on the critical path. This native opportunity
 screen is not a browser speedup or a measurement of indirect style decoding.
 
+## Opening cutters that fill a profile hole: weld guard and corner reconcile (#6940)
+
+A correctness fix in two places, not a lever. In the kernel, the subtract weld
+no longer moves an opening-cutter vertex off a host face it is exactly on and
+onto a separate host face lying within the same band. In the void router,
+before analytic prism extraction or exact-kernel cutter extension, a cutter
+vertex one snap-grid step from a host vertex is given that host vertex's
+coordinates through the same helper. The guard
+adds one scratch list per cutter vertex and, only when the nearest in-band
+face coincides with one of those, a walk over the host faces joined to it.
+The reconcile adds, per cutter preparation, one pass over the host's vertices
+with a bounding-box reject in front of a hash of the few that survive it.
+
+Interleaved native A/B, `perf_probe --iters 1 --json --fingerprint` as fresh
+processes, seven rounds in the balanced order `ab-order.mjs` produced. Each
+side was built by `build-at-ref.sh` in its own fresh worktree and its own
+target directory: base `upstream/main` at `385b61baa`, branch the commit that
+carries both rules. Same pinned toolchain and `profiling` profile on both
+sides, Apple M4 Pro. The machine was not idle during the rounds, so those timings do not qualify
+the end-to-end cost.
+
+The original native rounds on the busy machine, including further S_Office
+rounds with reversed median ordering, do not establish a stable timing effect
+or its cause. Detailed raw timing observations remain in PR #7024 rather than
+being duplicated here. Fresh final-source native A/B on a dedicated idle
+runner puts unchanged-output controls within their measured spread. Ordered
+geometry-payload hashes match for FZK, ISSUE_129 and Holter; MiniBIM output
+changes intentionally, so its shorter runtime is not an optimization claim.
+The deterministic instruction counter does identify a small additional FZK
+cost above the existing ratchet tolerance. That check remains failing; the
+ceiling has not been raised.
+
+Three final-source browser worker-pool comparisons retained every sample and
+all failed: ANGLE on ARM, Vulkan/SwiftShader on ARM, and the same Vulkan flags
+on x86. Each loses a WebGPU instance before geometry upload in at least one
+sample; failures occur on both base and candidate across those runs. Adapter
+preflight alone passes and is insufficient. The browser performance verdict
+is unqualified, not neutral or faster. PR #7024 carries the complete source
+provenance and artifacts; #7164 tracks investigation of the GPU failure on
+both architectures. Do not repeat samples until green or use native timing
+to waive the missing worker-pool qualification.
+
+The router regression now checks closure at the kernel snap-grid precision in
+both vertex frames. Its former 1 mm edge keys hid seams in analytic prism
+cases, even when the exact-kernel reconciliation closed the same inputs. Both
+paths now use that reconciliation, including axis-aligned bounds. Bounds that
+move are checked as an actual prism rather than replaced with a new AABB;
+unchanged bounds retain their original f64 precision. General public kernel
+subtraction keeps its pre-existing operand weld; only opening-specific entry
+points select the guard. The correction passes all synthetic cases
+and leaves the full real-fixture census identical to this PR's prior golden;
+no further bless was needed.
+
+Output. The first four fixtures kept their mesh, vertex and triangle counts
+and their ordered mesh FNV-1a64 on every run of both sides (`c4d504b83ff698ea`,
+`ff42e1a3f7fcf540`, `e54ef15fc7702c2f`, `52d69b2909024f56`). MiniBIM kept 3,946
+meshes and changed from 336,553 vertices / 182,848 triangles
+(`3ba0b4b5a565879b`) to 336,437 / 183,311 (`6d1d09c823d7720f`), each stable
+across the seven runs of its side. An untimed per-mesh comparison of the
+native pipeline's output over all 122 `.ifc` fixtures on disk (296,025 meshes
+on the base) found 120 fixtures identical mesh for mesh. MiniBIM differs in
+exactly the nine floor-slab hosts whose census rows this change repins.
+ISSUE_098 differs in two walls, both from the weld guard (one and two cutter
+vertices refused, each exactly on one host face with the refused target one
+grid step away) and neither from the reconcile: torn on the base and torn on
+the branch, 85 to 79 and 166 to 165 unmatched edges. The same comparison with
+per-element local frames forced on (`IFC_LITE_LOCAL_FRAME=1`) found 121
+identical and the same nine slabs. These comparisons cover positions, normals,
+indices and origins per mesh, not text metadata, materials, UVs or instancing.
+
+Verdict: correctness improves, but a timing verdict remains unqualified. The
+original native observations had overlapping ranges on fixtures with unchanged
+output. MiniBIM's output changes, and which downstream work stopped running was
+not traced. The final shared analytic/exact correction still needs an idle,
+interleaved browser worker-pool comparison against its base.
+
+Two lessons, both about the instrument.
+
+The first version of the guard sat in the weld every kernel subtract shares,
+and the watertightness census, which walks void hosts only, showed one
+non-slab row moving. The per-mesh fingerprint over the producer's whole output
+showed 21 elements in two models changing through the operand of an
+`IfcBooleanResult` DIFFERENCE, 20 of them with no openings and so invisible to
+the census, 7 of them for the worse. Scoping the guard to opening cutters
+removed all 21. For a kernel change, diff the producer's per-mesh fingerprints
+over the corpus before trusting a census delta as the whole output delta.
+
+A target directory shared between worktrees hands one worktree's binary to
+another. Cargo keys the artefact by package and features, not by checkout
+path, and decides freshness by source mtime: `cargo build` in this worktree,
+run a minute after `build-at-ref.sh` had built the base into the same
+directory, finished in 0.10 s and the "branch" binary was byte-identical to
+the base's. An A/B run that way compares a commit with itself. Give each side
+its own target directory, and compare the two binaries' hashes before timing
+anything.
+
 ## Activity tray startup budget (#6952, U02)
 
 The maintainer approved the measured eager-JavaScript ceiling for U02 while
