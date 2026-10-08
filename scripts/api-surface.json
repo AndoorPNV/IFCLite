@@ -6579,6 +6579,7 @@
     "IDSValidationSummary: interface",
     "IFCDataAccessor: interface",
     "IFCVersion: type",
+    "IdsXmlFormat: interface",
     "MaterialInfo: interface",
     "ParentInfo: interface",
     "PartOfRelation: type",
@@ -6624,7 +6625,8 @@
     "parseIDS: function",
     "passRateBand: function",
     "translateXsdRegex: function",
-    "validateIDS: function"
+    "validateIDS: function",
+    "writeIdsXml: function"
   ],
   "@ifc-lite/ids/bridge": [
     "EntityMeasureScales: interface",
@@ -9040,7 +9042,6 @@
     "unionByStorey: function",
     "unresolvedModelTagIds: function",
     "valueOpMatches: function",
-    "writeIdsXml: function",
     "yieldToEventLoop: function"
   ],
   "@ifc-lite/sandbox": [
