@@ -85,7 +85,9 @@
           "classifications": 16,
           "classificationPath": 16,
           "relationships": 16,
-          "documents": 16
+          "documents": 16,
+          "zoneSets": 16,
+          "sharesPerVolumeBasis": 32
         },
         "units": "Quantity values carry {value, unit} in the Properties panel display unit (project unit, or the display-unit override below); a null unit is undeclared. Property values are the panel display strings, with the unit inline when the measure declares one.",
         "displayUnitOverrides": {},
@@ -130,7 +132,7 @@
                 "quantities": {
                   "NetVolume": {
                     "value": 9.36350799647189,
-                    "unit": "m³"
+                    "unit": "m\u00b3"
                   },
                   "Depth": {
                     "value": 300.0000000000386,
@@ -138,12 +140,18 @@
                   },
                   "NetArea": {
                     "value": 31.211693321568944,
-                    "unit": "m²"
+                    "unit": "m\u00b2"
                   }
                 }
               }
             ],
             "qsetCount": 1,
+            "zoneVolumeBreakdowns": {
+              "quantityStatus": "available",
+              "zoneSetCount": 0,
+              "zoneSets": [],
+              "volumeBases": []
+            },
             "nativeEdit": {
               "units": "m",
               "dimensionsStatus": "unavailable",
