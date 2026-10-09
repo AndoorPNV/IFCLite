@@ -11,6 +11,7 @@
  * anything moved since.
  */
 
+import { resolveReviewedLayers, LayerRefusal } from './model-authoring-layers';
 import { authoringSlabOpeningGhost } from './model-authoring-slab-opening-ghost';
 import { verifySlabOpeningHost } from './model-authoring-slab-opening';
 import { stairRailingGhost } from './model-authoring-stair-railing-ghost';
@@ -26,7 +27,8 @@ import { describeRefusal } from '@/lib/element-transform/commit';
 import { copiedProductsInStore, createCopyContext, productStoreyOrigin, liveEntityConforms } from '@ifc-lite/create';
 import { batchDigest } from './model-change-preview';
 import { isNewElement, toMetres, type AuthoringOp, type ElementTarget, type ExistingElement, type ModelAuthoringBatch } from './model-authoring';
-import { dryRunAuthoring, type ElementId } from './model-authoring-native';
+import type { ElementId } from './model-authoring-native';
+import { validateAuthoringDraft } from './model-authoring-preview-draft';
 import {
   authoringReader, className, conforms, deletionRefusal, materialNameOf, nameOf, placementAngle, typeNameOf, type AuthoringReader,
 } from './model-authoring-read';
@@ -80,7 +82,7 @@ function existing(ctx: Context, target: ExistingElement, row: AuthoringRow): num
   join(row, modelId);
   const r = reader(ctx, modelId);
   if ((row.op.op.startsWith('stair.') || row.op.op.startsWith('railing.')) && !uniqueSplitGuid(r.dataStore, r.editor, target.globalId)) throw new Refusal('ambiguous-target', 'The native stair or railing target GlobalId is not unique in its owning model');
-  if ((row.op.op === 'element.split' || row.op.op === 'element.trimExtend' || row.op.op === 'type.detach') && !uniqueSplitGuid(r.dataStore, r.editor, target.globalId)) throw new Refusal('ambiguous-target', 'The native target GlobalId is not unique in its owning model');
+  if ((row.op.op === 'element.split' || row.op.op === 'element.trimExtend' || row.op.op === 'type.detach' || row.op.op === 'material.layers') && !uniqueSplitGuid(r.dataStore, r.editor, target.globalId)) throw new Refusal('ambiguous-target', 'The native target GlobalId is not unique in its owning model');
   const ifcClass = className(r, expressId);
   const name = nameOf(r, expressId);
   row.before.ifcClass = ifcClass;
@@ -246,6 +248,17 @@ function resolve(ctx: Context, row: AuthoringRow): void {
       const root = transformRoot(ctx, row, row.expressId);
       return op.op === 'element.move' ? checkMove(ctx, op, root) : checkTurn(ctx, row, op, root);
     }
+    case 'material.layers': {
+      row.resolved.target = row.expressId = existing(ctx, op.target, row);
+      try {
+        row.resolved.layers = resolveReviewedLayers(ctx.state, reader(ctx, row.modelId!), row.expressId, op, ctx.batch.units);
+      } catch (error) {
+        if (error instanceof LayerRefusal) throw new Refusal(error.status, error.message);
+        throw error;
+      }
+      row.previewUnavailable = true;
+      return;
+    }
     case 'type.detach': {
       row.resolved.target = row.expressId = existing(ctx, op.target, row);
       const r = reader(ctx, row.modelId!);
@@ -348,8 +361,8 @@ export function previewModelAuthoring(state: ViewerState, batch: ModelAuthoringB
       row.issue = error.message;
     }
   }
-  nativeDryRun(ctx, batch);
-  for (const row of ctx.rows) if (row.status === 'ready' && row.modelId && (row.op.op === 'element.resize' || row.op.op === 'element.profile' || row.op.op === 'element.trimExtend')) {
+  validateAuthoringDraft(state, batch, ctx.rows, modelId => reader(ctx, modelId));
+  for (const row of ctx.rows) if (row.status === 'ready' && row.modelId && (row.op.op === 'element.resize' || row.op.op === 'element.profile' || row.op.op === 'element.trimExtend' || (row.op.op === 'material.layers' && row.op.scope === 'element' && row.resolved.layers?.kind === 'wall'))) {
     const boundary = row.op.op === 'element.trimExtend' ? row.resolved.reachBoundary : undefined;
     // The whole native batch validates this boundary; the independent body draft
     // cannot reproduce a preceding edit of the same existing wall (#7262).
@@ -375,22 +388,6 @@ export function previewModelAuthoring(state: ViewerState, batch: ModelAuthoringB
   return preview;
 }
 
-/** The builders decide what static checks cannot: dimensions, hosts, joins, schema support. */
-function nativeDryRun(ctx: Context, batch: ModelAuthoringBatch): void {
-  const byModel = new Map<string, AuthoringRow[]>();
-  for (const row of ctx.rows) if (row.status === 'ready' && row.modelId) byModel.set(row.modelId, [...(byModel.get(row.modelId) ?? []), row]);
-  for (const [modelId, rows] of byModel) {
-    const r = reader(ctx, modelId);
-    const refusals = dryRunAuthoring(batch, r.dataStore, r.view, modelId, rows.map(({ index, op, resolved }) => ({ index, op, resolved })), { globalIdScopes: [...ctx.state.models].map(([id, model]) => ({ dataStore: model.ifcDataStore, view: ctx.state.mutationViews.get(id) })) });
-    for (const row of rows) {
-      const refusal = refusals.get(row.index);
-      if (refusal === undefined) continue;
-      const blocked = row.dependsOn.some((i) => refusals.has(i));
-      row.status = blocked ? 'blocked' : 'invalid';
-      row.issue = blocked ? 'It needs an element another row creates, which the model refused' : refusal;
-    }
-  }
-}
 
 export function authoringCounts(rows: readonly AuthoringRow[]): Record<AuthoringRowStatus, number> {
   const counts: Record<AuthoringRowStatus, number> = { ready: 0, unchanged: 0, conflict: 0, 'missing-target': 0, 'ambiguous-target': 0,

@@ -18,6 +18,8 @@ import { effectiveSelectedClass } from '@/components/viewer/properties/effective
 import { readOnlyModelEditLease, type NativeReadLease } from './model-authoring-read-target';
 import { nativeEditEvidence, nativeRootName, type NativeEditEvidence } from './native-edit-evidence';
 import { nativeTypeEvidence, type NativeTypeEvidence } from './native-type-evidence';
+import { nativeLayerEvidence, type NativeLayerEvidence } from './native-layer-evidence';
+import { nativeStairEvidenceFromTarget } from './model-authoring-stair-lifecycle';
 import { nativeCostEvidence, type CostEvidence } from './cost-graph-evidence';
 
 export interface SelectionElement extends NativeAuthoringEvidence {
@@ -28,6 +30,8 @@ export interface SelectionElement extends NativeAuthoringEvidence {
   name: string | null;
   nativeEdit: NativeEditEvidence;
   nativeType: NativeTypeEvidence;
+  nativeLayers?: NativeLayerEvidence;
+  nativeStairExpected: ReturnType<typeof nativeStairEvidenceFromTarget>;
   nativeCost: CostEvidence;
 }
 
@@ -100,6 +104,8 @@ export function captureSelectionGrounding(state: GroundingState, limit = SELECTI
       nativeEdit: nativeEditEvidence(nativeTarget(ref.modelId), ref.expressId),
       ...nativeAuthoringEvidence(nativeTarget(ref.modelId), ref.expressId),
       nativeType: nativeTypeEvidence(state, nativeTarget(ref.modelId), ref.expressId),
+      nativeLayers: nativeLayerEvidence(state, nativeTarget(ref.modelId), ref.expressId),
+      nativeStairExpected: nativeStairEvidenceFromTarget(nativeTarget(ref.modelId), ref.expressId),
       nativeCost: nativeCostEvidence(nativeTarget(ref.modelId), ref.expressId),
     });
   }
