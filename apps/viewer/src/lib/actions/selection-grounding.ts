@@ -11,6 +11,7 @@
  * citations resolve by).
  */
 
+import { nativeGridEvidence, type NativeGridEvidence } from './native-grid-evidence';
 import { nativeAuthoringEvidence, type NativeAuthoringEvidence } from './native-authoring-evidence';
 import type { ViewerState } from '@/store';
 import { resolveEntityRefGlobalIdFromState } from '@/store/resolveEntityRef';
@@ -21,6 +22,7 @@ import { nativeTypeEvidence, type NativeTypeEvidence } from './native-type-evide
 import { nativeCostEvidence, type CostEvidence } from './cost-graph-evidence';
 
 export interface SelectionElement extends NativeAuthoringEvidence {
+  nativeGrid?: NativeGridEvidence;
   globalId: string;
   modelId: string;
   /** IFC class, `IfcPascalCase`. */
@@ -99,6 +101,7 @@ export function captureSelectionGrounding(state: GroundingState, limit = SELECTI
       name: nativeRootName({ dataStore: store, view: state.mutationViews.get(ref.modelId) }, ref.expressId) || null,
       nativeEdit: nativeEditEvidence(nativeTarget(ref.modelId), ref.expressId),
       ...nativeAuthoringEvidence(nativeTarget(ref.modelId), ref.expressId),
+      ...(() => { const nativeGrid = nativeGridEvidence(nativeTarget(ref.modelId), ref.expressId); return nativeGrid ? { nativeGrid } : {}; })(),
       nativeType: nativeTypeEvidence(state, nativeTarget(ref.modelId), ref.expressId),
       nativeCost: nativeCostEvidence(nativeTarget(ref.modelId), ref.expressId),
     });

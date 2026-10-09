@@ -43,6 +43,7 @@ import { propertyDisplayValue } from '@/components/viewer/properties/propertyDis
 import { evidenceRow, unavailableCapture, type EvidenceAdapter } from './types';
 import { nativeReadTargets } from '@/lib/actions/model-authoring-read-target';
 import { nativeEditEvidence, nativeRootName } from '@/lib/actions/native-edit-evidence';
+import { nativeGridEvidence } from '@/lib/actions/native-grid-evidence';
 import { nativeTypeEvidence } from '@/lib/actions/native-type-evidence';
 import { nativeCostTransportEvidence } from '@/lib/actions/cost-graph-evidence';
 import type { ModelEditTarget } from '@/store/slices/mutation-modelling-records';
@@ -163,6 +164,7 @@ function elementRow(s: ViewerState, ref: EntityRef, source: ModelSource, rich: b
     attributes, psets, psetCount: data.psets.length, quantities, qsetCount: data.qsets.length,
     nativeEdit: nativeEditEvidence(nativeTarget, ref.expressId),
     nativeType: nativeTypeEvidence(s, nativeTarget, ref.expressId),
+    ...(() => { const nativeGrid = nativeGridEvidence(nativeTarget, ref.expressId); return nativeGrid ? { nativeGrid } : {}; })(),
     ...(rich ? { nativeCost: nativeCostTransportEvidence(nativeTarget, ref.expressId) } : {}),
     structuralStatus: !source.store ? 'unavailable' : source.store.source?.length ? 'available' : 'unavailable-source',
     structural: structuralEvidence(structuralData, ref.expressId, typeof data.attributes.get('GlobalId') === 'string'
