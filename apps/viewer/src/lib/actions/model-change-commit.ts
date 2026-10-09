@@ -27,7 +27,7 @@ import type { ReceiptValidation } from './validation-verdicts';
 
 export interface AppliedChange {
   index: number;
-  op: ModelChange['op'] | AuthoringOpName | CostOpName | 'room.command';
+  op: ModelChange['op'] | AuthoringOpName | CostOpName | 'room.command' | 'zones.emit';
   /** Empty only for non-root Cost records, which are addressed by native expressId. */
   globalId: string;
   expressId?: number;
@@ -41,7 +41,7 @@ export interface AppliedChange {
 export interface ModelChangeReceipt {
   version: 1;
   /** Absent on model.changes; other native reviewed producer kinds share the same durable receipt/Undo route. */
-  kind?: 'model.authoring' | 'room.command' | 'cost.graph';
+  kind?: 'model.authoring' | 'room.command' | 'zones.emit' | 'cost.graph';
   id: string;
   title: string;
   digest: string;
