@@ -48,6 +48,7 @@ import { nativeReadTargets } from '@/lib/actions/model-authoring-read-target';
 import { nativeEditEvidence, nativeRootName } from '@/lib/actions/native-edit-evidence';
 import { nativeTypeEvidence } from '@/lib/actions/native-type-evidence';
 import { nativeCostTransportEvidence } from '@/lib/actions/cost-graph-evidence';
+import { roomAutoAllEvidence } from '@/lib/actions/room-auto-all-evidence';
 import type { ModelEditTarget } from '@/store/slices/mutation-modelling-records';
 
 type Channel = 'storeys' | 'multi' | 'renderer-ids' | 'single';
@@ -168,6 +169,7 @@ function elementRow(s: ViewerState, ref: EntityRef, source: ModelSource, rich: b
     nativeEdit: nativeEditEvidence(nativeTarget, ref.expressId),
     nativeType: nativeTypeEvidence(s, nativeTarget, ref.expressId),
     ...(rich ? { nativeCost: nativeCostTransportEvidence(nativeTarget, ref.expressId) } : {}),
+    ...(rich ? { nativeRoomAutoAll: roomAutoAllEvidence(nativeTarget) } : {}),
     structuralStatus: !source.store ? 'unavailable' : source.store.source?.length ? 'available' : 'unavailable-source',
     structural: structuralEvidence(structuralData, ref.expressId, typeof data.attributes.get('GlobalId') === 'string'
       ? String(data.attributes.get('GlobalId')) : undefined, setLimit, valueLimit, source.units, source.store?.schemaVersion, Boolean(source.store?.source?.length)),
@@ -258,7 +260,7 @@ export const selectionAdapter: EvidenceAdapter = {
       summary: {
         kind: 'selection', channel, selectionSize: refs.length, modelCount: byModel.size,
         ...(sample.length !== 1 ? { nativeStructuralCapture: 'unavailable-selection-budget' } : {}),
-        ...(!rich ? { nativeCostCapture: 'unavailable-selection-budget' } : {}),
+        ...(!rich ? { nativeCostCapture: 'unavailable-selection-budget', nativeRoomAutoAllCapture: 'unavailable-selection-budget' } : {}),
         byModel: [...byModel].map(([modelId, count]) => ({ modelId, name: sourceFor(modelId).name, count })),
         byClass: [...byClass].map(([type, count]) => ({ type, count })).sort((a, b) => b.count - a.count),
         perElementBounds: rich ? { sets: 16, valuesPerSet: 32, attributes: 32, classifications: 16, classificationPath: 16, relationships: 16, documents: 16 }
